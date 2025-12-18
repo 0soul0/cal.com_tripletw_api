@@ -15,11 +15,88 @@ model Attendee {
   timeZone    String
   phoneNumber String?
   locale      String?      @default("en")
-  //booking     Booking?     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking     Booking?     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   bookingId   Int?
   //bookingSeat BookingSeat?
   noShow      Boolean?     @default(false)
 
   @@index([email])
   @@index([bookingId])
+  
+}
+
+model Booking {
+  id                           Int                               @id @default(autoincrement())
+  uid                          String                            @unique
+  // (optional) UID based on slot start/end time & email against duplicates
+  idempotencyKey               String?                           @unique
+  // user                         User?                             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                       Int?
+  // User's email at the time of booking
+  /// @zod.import(["import { emailSchema } from '@calcom/lib/emailSchema'"]).custom.use(emailSchema)
+  userPrimaryEmail             String?
+  // references                   BookingReference[]
+  // eventType                    EventType?                        @relation(fields: [eventTypeId], references: [id])
+  eventTypeId                  Int?
+  title                        String
+  description                  String?
+  customInputs                 Json?
+  /// @zod.import(["import { bookingResponses } from '../../zod-utils'"]).custom.use(bookingResponses)
+  responses                    Json?
+  startTime                    DateTime
+  endTime                      DateTime
+  attendees                    Attendee[]
+  location                     String?
+  createdAt                    DateTime                          @default(now())
+  updatedAt                    DateTime?                         @updatedAt
+  // status                       BookingStatus                     @default(ACCEPTED)
+  paid                         Boolean                           @default(false)
+  // payment                      Payment[]
+  // destinationCalendar          DestinationCalendar?              @relation(fields: [destinationCalendarId], references: [id])
+  destinationCalendarId        Int?
+  cancellationReason           String?
+  rejectionReason              String?
+  reassignReason               String?
+  // reassignBy                   User?                             @relation("reassignByUser", fields: [reassignById], references: [id])
+  reassignById                 Int?
+  dynamicEventSlugRef          String?
+  dynamicGroupSlugRef          String?
+  rescheduled                  Boolean?
+  fromReschedule               String?
+  recurringEventId             String?
+  smsReminderNumber            String?
+  // workflowReminders            WorkflowReminder[]
+  scheduledJobs                String[] // scheduledJobs is deprecated, please use scheduledTriggers instead
+  // seatsReferences              BookingSeat[]
+  /// @zod.import(["import { bookingMetadataSchema } from '../../zod-utils'"]).custom.use(bookingMetadataSchema)
+  metadata                     Json?
+  isRecorded                   Boolean                           @default(false)
+  iCalUID                      String?                           @default("")
+  iCalSequence                 Int                               @default(0)
+  // instantMeetingToken          InstantMeetingToken?
+  rating                       Int?
+  ratingFeedback               String?
+  noShowHost                   Boolean?                          @default(false)
+  // scheduledTriggers            WebhookScheduledTriggers[]
+  oneTimePassword              String?                           @unique @default(uuid())
+  /// @zod.import(["import { emailSchema } from '@calcom/lib/emailSchema'"]).custom.use(emailSchema)
+  cancelledBy                  String?
+  /// @zod.import(["import { emailSchema } from '@calcom/lib/emailSchema'"]).custom.use(emailSchema)
+  rescheduledBy                String?
+  // Ah, made a typo here. Should have been routedFromRoutingFormRe"s"ponse. Live with it :(
+  // routedFromRoutingFormReponse App_RoutingForms_FormResponse?
+  // assignmentReason             AssignmentReason[]
+  // internalNote                 BookingInternalNote[]
+  // creationSource               CreationSource?
+  // tracking                     Tracking?
+  // routingFormResponses         RoutingFormResponseDenormalized[]
+  // expenseLogs                  CreditExpenseLog[]
+
+  @@index([eventTypeId])
+  @@index([userId])
+  @@index([destinationCalendarId])
+  @@index([recurringEventId])
+  @@index([uid])
+  // @@index([status])
+  // @@index([startTime, endTime, status])
 }

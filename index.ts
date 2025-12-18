@@ -41,26 +41,53 @@ app.delete('/api/attendee/:id', authenticate, async (req: Request, res: Response
   }
 
   try {
-    /**
-     * 💡 優化 2: 使用 deleteMany (在迴圈呼叫中更安全)
-     * .delete() 如果資料不存在會噴 Error
-     * .deleteMany() 如果資料不存在只會回傳 count: 0，不會導致程式報錯
-     * 這對於「不確定資料是否還在」的快速迴圈刪除更友善
-     */
-    const result = await prisma.attendee.deleteMany({
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. 查詢該 attendee 並取得其 bookingId
+    const attendee = await tx.attendee.findUnique({
       where: { id: numId },
+      select: { bookingId: true }
     });
 
-    if (result.count === 0) {
-      res.status(404).json({ success: false, message: '找不到資料或已被刪除' });
-      return;
+    // 如果找不到 attendee，直接回傳 null 或報錯
+    if (!attendee) return null;
+
+    const { bookingId } = attendee;
+    console.log('Attendee Booking ID:', bookingId);
+
+    if (bookingId === null || bookingId === undefined) {
+        return null; 
+    }
+    // 2. 查詢該 bookingId 下還有多少筆 attendee
+    const attendeeCount = await tx.attendee.count({
+      where: { bookingId: bookingId }
+    });
+    console.log('Attendee Count for Booking ID', attendeeCount);
+
+    // 3. 執行刪除 attendee
+    const deleteResult = await tx.attendee.delete({
+      where: { id: numId }
+    });
+
+    // 4. 如果原本只有一筆，則刪除對應的 Booking
+    if (attendeeCount === 1) {
+     const deleteBooking =  await tx.booking.delete({
+        where: { id: bookingId }
+      });
+      console.log('Deleted Booking:', deleteBooking);
     }
 
-    res.status(200).json({
-      success: true,
-      message: `已刪除 ID: ${id}`,
-      count: result.count
-    });
+    return deleteResult;
+  });
+
+  if (!result) {
+    res.status(404).json({ success: false, message: '找不到資料' });
+    return;
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `已刪除 ID: ${id}，且已處理相關訂單`,
+  });
 
   } catch (error: any) {
     console.error('Database Error:', error);
