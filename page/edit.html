@@ -92,7 +92,6 @@
     <div class="container">
         <header>
             <h2>編輯最後預約時間</h2>
-            <div class="schedule-info" id="scheduleDisplay">正在讀取排程...</div>
         </header>
 
         <form id="editForm">
@@ -159,7 +158,6 @@
                 document.getElementById('scheduleDisplay').innerText = "錯誤：缺少排程 ID";
                 return;
             }
-            document.getElementById('scheduleDisplay').innerText = `正在編輯排程 ID: ${scheduleId}`;
 
             try {
                 const res = await fetch(`/api/threshold/${scheduleId}?create=${create}`);
