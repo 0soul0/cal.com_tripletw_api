@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排程編輯器 | Attendee API</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        header { text-align: center; margin-bottom: 2rem; }
+        h2 { margin: 0; color: var(--primary-color); font-size: 1.5rem; }
+        .schedule-info { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem; }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 1.5rem; }
+        th { background-color: #f9fafb; color: var(--text-muted); font-weight: 500; text-transform: uppercase; font-size: 0.75rem; padding: 12px; border-bottom: 2px solid var(--border-color); }
+        td { padding: 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+
+        /* 垂直置中與佈局 */
+        .flex-container {
+            display: flex;
+            align-items: center;
+            justify-content: center; /* 讓開關在單元格內水平置中 */
+            height: 100%;
+        }
+
+        .week-display {
+            font-weight: 500;
+            color: var(--text-main);
+            text-align: center;
+            display: block;
+        }
+
+        input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
+        input[readonly] { background-color: transparent; border: none; cursor: default; }
+
+        /* Switch Button 樣式 */
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; margin: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc; transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 16px; width: 16px;
+            left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary-color); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        .button-group { display: flex; gap: 12px; margin-top: 1rem; }
+        .btn { flex: 2; padding: 12px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.2s; font-family: inherit; border: none; background-color: var(--primary-color); color: white; }
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn-secondary { flex: 1; background-color: white; color: var(--text-muted); border: 1px solid var(--border-color); }
+
+        .toast { visibility: hidden; min-width: 200px; background-color: #10b981; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 100; }
+        .toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h2>編輯出席時間</h2>
+            <div class="schedule-info" id="scheduleDisplay">正在讀取排程...</div>
+        </header>
+
+        <form id="editForm">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">狀態</th>
+                        <th style="width: 40%;">星期</th>
+                        <th>時間設定</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+
+            <div class="button-group">
+                <button type="submit" class="btn">儲存變更</button>
+                <button type="button" class="btn btn-secondary" onclick="handleClose()">關閉視窗</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="toast" class="toast">儲存成功！</div>
+
+    <script>
+        let scheduleId = new URLSearchParams(window.location.search).get('scheduleId');
+
+        function handleClose() {
+            window.close();
+            setTimeout(() => { if (!window.closed) alert('請直接關閉分頁。'); }, 500);
+        }
+
+        function showToast() {
+            const toast = document.getElementById("toast");
+            toast.className = "toast show";
+            setTimeout(() => { toast.className = "toast"; }, 3000);
+        }
+
+        // 轉換星期數字為文字
+        function getWeekName(num) {
+            const weeks = {
+                1: "星期一", 2: "星期二", 3: "星期三", 4: "星期四",
+                5: "星期五", 6: "星期六", 7: "星期日"
+            };
+            return weeks[num] || `星期 ${num}`;
+        }
+
+        function toggleRowState(checkbox) {
+            const row = checkbox.closest('tr');
+            const timeInput = row.querySelector('.time-input');
+            const isOpen = checkbox.checked;
+
+            if (isOpen) {
+                timeInput.style.display = 'inline-block';
+                timeInput.disabled = false;
+            } else {
+                timeInput.style.display = 'none';
+                timeInput.disabled = true;
+            }
+        }
+
+        async function initPage() {
+            if (!scheduleId) {
+                document.getElementById('scheduleDisplay').innerText = "錯誤：缺少排程 ID";
+                return;
+            }
+            document.getElementById('scheduleDisplay').innerText = `正在編輯排程 ID: ${scheduleId}`;
+
+            try {
+                const res = await fetch(`/api/threshold/${scheduleId}`);
+                const result = await res.json();
+                const dataArray = Array.isArray(result) ? result : result.data;
+                const tbody = document.getElementById('tableBody');
+                
+                tbody.innerHTML = dataArray.map((item, index) => `
+                    <tr class="threshold-row">
+                        <td class="switch-cell">
+                            <div class="flex-container">
+                                <label class="switch">
+                                    <input type="checkbox" 
+                                        class="open-toggle"
+                                        ${item.isOpen || item.isOpen ? 'checked' : ''} 
+                                        onchange="toggleRowState(this)">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="week-display">${getWeekName(item.week)}</span>
+                            <input type="hidden" name="week" value="${item.week}">
+                        </td>
+                        <td>
+                            <input type="time" 
+                                name="time" 
+                                class="time-input"
+                                value="${item.time || ''}" 
+                                placeholder="例如: 17:00"
+                                style="display: ${(item.isOpen || item.isOpen) ? 'inline-block' : 'none'};"
+                                ${(item.isOpen || item.isOpen) ? '' : 'disabled'}>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error('初始化失敗', err);
+            }
+        }
+
+        function buildSubmit() {   
+            document.getElementById('editForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const rows = document.querySelectorAll('#tableBody tr');
+                
+                const updatedData = Array.from(rows).map(row => {
+                    const openSwitch = row.querySelector('.open-toggle'); 
+                    const isOpen = openSwitch.checked;
+
+                    return {
+                        week: parseInt(row.querySelector('input[name="week"]').value),
+                        isOpen: isOpen, 
+                        time: isOpen ? row.querySelector('input[name="time"]').value : ""
+                    };
+                });
+
+                try {
+                    const response = await fetch(`/api/threshold/${scheduleId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: updatedData })
+                    });
+
+                    if (response.ok) {
+                        showToast();
+                    } else {
+                        const error = await response.json();
+                        alert('儲存失敗：' + (error.message || '未知錯誤'));
+                    }
+                } catch (err) {
+                    alert('儲存失敗，請檢查連線');
+                }
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initPage();
+            buildSubmit();
+        });
+    </script>
+</body>
+</html>

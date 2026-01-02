@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統登入 | Attendee API</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --error-color: #ef4444;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at top right, rgba(79, 70, 229, 0.05), transparent),
+                              radial-gradient(circle at bottom left, rgba(79, 70, 229, 0.05), transparent);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-card {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background-color: var(--primary-color);
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        h2 {
+            margin: 0;
+            color: var(--text-main);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        input {
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        /* 密碼切換按鈕樣式 */
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 38px; /* 根據 label 高度調整 */
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            padding: 4px;
+        }
+
+        .password-toggle:hover {
+            color: var(--text-main);
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            font-weight: 500;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f9fafb;
+            color: var(--text-main);
+            border-color: #d1d5db;
+        }
+
+        #errorMsg {
+            color: var(--error-color);
+            font-size: 0.875rem;
+            text-align: center;
+            margin-top: 1rem;
+            min-height: 1.25rem;
+            font-weight: 500;
+        }
+
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <header>
+            <div class="logo-icon">A</div>
+            <h2>歡迎回來</h2>
+            <p class="subtitle">請登入您的帳號以編輯排程</p>
+        </header>
+
+        <div id="loginForm">
+            <div class="form-group">
+                <label for="email">電子郵件或帳號</label>
+                <input type="text" id="email" placeholder="admin@example.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密碼</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+                <button type="button" class="password-toggle" id="togglePassword" title="顯示/隱藏密碼">
+                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="button-group">
+                <button id="loginBtn" class="btn btn-primary">立即登入</button>
+                <button type="button" class="btn btn-secondary" onclick="handleClose()">關閉視窗</button>
+            </div>
+        </div>
+
+        <p id="errorMsg"></p>
+
+        <footer>
+            &copy; 2025 Attendee API 管理系統
+        </footer>
+    </div>
+
+    <script>
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const passwordInput = document.getElementById('password');
+        const togglePassword = document.getElementById('togglePassword');
+        const eyeIcon = document.getElementById('eyeIcon');
+
+        // 顯示/隱藏密碼切換
+        togglePassword.addEventListener('click', () => {
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+            
+            // 切換圖示效果 (簡單切換顏色或改變路徑，這裡示範切換顏色)
+            eyeIcon.style.color = isPassword ? 'var(--primary-color)' : 'var(--text-muted)';
+            
+            // 如果需要切換圖示內容，也可以直接更換 SVG 內部路徑
+            if (isPassword) {
+                // 顯示狀態的圖示 (Eye)
+                eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+            } else {
+                // 隱藏狀態的圖示 (Eye Off)
+                eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+            }
+        });
+
+        // 關閉視窗邏輯
+        function handleClose() {
+            window.close();
+            setTimeout(() => {
+                if (!window.closed) {
+                    alert('瀏覽器限制：請直接關閉此分頁標籤。');
+                }
+            }, 500);
+        }
+
+        loginBtn.addEventListener('click', async () => {
+            const email = document.getElementById('email').value;
+            const password = passwordInput.value;
+            
+            if (!email || !password) {
+                errorMsg.innerText = '請填寫完整資訊';
+                return;
+            }
+
+            loginBtn.innerText = '登入中...';
+            loginBtn.disabled = true;
+            errorMsg.innerText = '';
+
+            const pathSegments = window.location.pathname.split('/');
+            const scheduleId = pathSegments[pathSegments.length - 1];
+            const targetId = (scheduleId === 'login' || !scheduleId) ? '1' : scheduleId;
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, scheduleId })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const receivedId = data.scheduleId;
+                    window.location.href = `/edit/${receivedId}`;
+                    // window.location.href = `/edit/${targetId}`;
+                } else {
+                    errorMsg.innerText = '帳號或密碼錯誤，請再試一次';
+                    loginBtn.innerText = '立即登入';
+                    loginBtn.disabled = false;
+                }
+            } catch (err) {
+                errorMsg.innerText = '連線失敗，請檢查網路狀態';
+                loginBtn.innerText = '立即登入';
+                loginBtn.disabled = false;
+            }
+        });
+
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loginBtn.click();
+        });
+    </script>
+</body>
+</html>

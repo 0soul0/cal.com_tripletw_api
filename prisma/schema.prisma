@@ -1,3 +1,15 @@
+// npx prisma generate 同步
+
+// CREATE TABLE "TimeThreshold" (
+//     "id" SERIAL PRIMARY KEY,
+//     "userId" INTEGER NOT NULL,           
+//     "schedule" INTEGER NOT NULL,
+//     "data" JSONB NOT NULL DEFAULT '[]'
+// );
+
+// -- 建立複合唯一索引：同一個 email 下，schedule 不能重複
+// -- 這樣不同 email 就可以同時擁有 schedule 1
+// CREATE UNIQUE INDEX "TimeThreshold_userId_schedule_key" ON "TimeThreshold"("userId", "schedule");
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
@@ -99,4 +111,147 @@ model Booking {
   @@index([uid])
   // @@index([status])
   // @@index([startTime, endTime, status])
+}
+
+
+
+
+// It holds Personal Profiles of a User plus it has email, password and other core things..
+model User {
+  id                  Int                  @id @default(autoincrement())
+  username            String?
+  name                String?
+  /// @zod.import(["import { emailSchema } from '@calcom/lib/emailSchema'"]).custom.use(emailSchema)
+  email               String
+  emailVerified       DateTime?
+  password            UserPassword?
+  bio                 String?
+  avatarUrl           String?
+  timeZone            String               @default("Europe/London")
+  // travelSchedules     TravelSchedule[]
+  weekStart           String               @default("Sunday")
+  // DEPRECATED - TO BE REMOVED
+  startTime           Int                  @default(0)
+  endTime             Int                  @default(1440)
+  // </DEPRECATED>
+  bufferTime          Int                  @default(0)
+  hideBranding        Boolean              @default(false)
+  // TODO: should be renamed since it only affects the booking page
+  theme               String?
+  appTheme            String?
+  createdDate         DateTime             @default(now()) @map(name: "created")
+  trialEndsAt         DateTime?
+  lastActiveAt        DateTime?
+  // eventTypes          EventType[]          @relation("user_eventtype")
+  // credentials         Credential[]
+  // teams               Membership[]
+  // bookings            Booking[]
+  // schedules           Schedule[]
+  defaultScheduleId   Int?
+  // selectedCalendars   SelectedCalendar[]
+  completedOnboarding Boolean              @default(false)
+  locale              String?
+  timeFormat          Int?                 @default(12)
+  twoFactorSecret     String?
+  twoFactorEnabled    Boolean              @default(false)
+  backupCodes         String?
+  // identityProvider    IdentityProvider     @default(CAL)
+  identityProviderId  String?
+  // availability        Availability[]
+  invitedTo           Int?
+  // webhooks            Webhook[]
+  brandColor          String?
+  darkBrandColor      String?
+  // the location where the events will end up
+  // destinationCalendar DestinationCalendar?
+  // participate in dynamic group booking or not
+  allowDynamicBooking Boolean?             @default(true)
+
+  // participate in SEO indexing or not
+  allowSEOIndexing Boolean? @default(true)
+
+  // receive monthly digest email for teams or not
+  receiveMonthlyDigestEmail Boolean? @default(true)
+
+  /// @zod.import(["import { userMetadata } from '../../zod-utils'"]).custom.use(userMetadata)
+  metadata             Json?
+  verified             Boolean?                @default(false)
+  // role                 UserPermissionRole      @default(USER)
+  disableImpersonation Boolean                 @default(false)
+  // impersonatedUsers    Impersonations[]        @relation("impersonated_user")
+  // impersonatedBy       Impersonations[]        @relation("impersonated_by_user")
+  // apiKeys              ApiKey[]
+  // accounts             Account[]
+  // sessions             Session[]
+  // Feedback             Feedback[]
+  // ownedEventTypes      EventType[]             @relation("owner")
+  // workflows            Workflow[]
+  // routingForms         App_RoutingForms_Form[] @relation("routing-form")
+  // updatedRoutingForms  App_RoutingForms_Form[] @relation("updated-routing-form")
+  // verifiedNumbers      VerifiedNumber[]
+  // verifiedEmails       VerifiedEmail[]
+  // hosts                Host[]
+  // organizationId is deprecated. Instead, rely on the Profile to search profiles by organizationId and then get user from the profile.
+  organizationId       Int?
+  // organization         Team?                   @relation("scope", fields: [organizationId], references: [id], onDelete: SetNull)
+  // accessCodes          AccessCode[]
+  // bookingRedirects     OutOfOfficeEntry[]
+  // bookingRedirectsTo   OutOfOfficeEntry[]      @relation(name: "toUser")
+
+  // Used to lock the user account
+  locked                         Boolean                       @default(false)
+  // platformOAuthClients           PlatformOAuthClient[]
+  // AccessToken                    AccessToken[]
+  // RefreshToken                   RefreshToken[]
+  // PlatformAuthorizationToken     PlatformAuthorizationToken[]
+  // profiles                       Profile[]
+  movedToProfileId               Int?
+  // movedToProfile                 Profile?                      @relation("moved_to_profile", fields: [movedToProfileId], references: [id], onDelete: SetNull)
+  // secondaryEmails                SecondaryEmail[]
+  isPlatformManaged              Boolean                       @default(false)
+  // OutOfOfficeReasons             OutOfOfficeReason[]
+  // smsLockState                   SMSLockState                  @default(UNLOCKED)
+  smsLockReviewedByAdmin         Boolean                       @default(false)
+  // NotificationsSubscriptions     NotificationsSubscriptions[]
+  referralLinkId                 String?
+  // features                       UserFeatures[]
+  // reassignedBookings             Booking[]                     @relation("reassignByUser")
+  // createdAttributeToUsers        AttributeToUser[]             @relation("createdBy")
+  // updatedAttributeToUsers        AttributeToUser[]             @relation("updatedBy")
+  // createdTranslations            EventTypeTranslation[]        @relation("CreatedEventTypeTranslations")
+  // updatedTranslations            EventTypeTranslation[]        @relation("UpdatedEventTypeTranslations")
+  // BookingInternalNote            BookingInternalNote[]
+  // creationSource                 CreationSource?
+  // createdOrganizationOnboardings OrganizationOnboarding[]      @relation("CreatedOrganizationOnboardings")
+  // filterSegments                 FilterSegment[]
+  // filterSegmentPreferences       UserFilterSegmentPreference[]
+  // creditBalance                  CreditBalance?
+  whitelistWorkflows             Boolean                       @default(false)
+  // calAiPhoneNumbers              CalAiPhoneNumber[]
+  // agents                         Agent[]
+
+  @@unique([email])
+  @@unique([email, username])
+  @@unique([username, organizationId])
+  @@unique([movedToProfileId])
+  @@index([username])
+  @@index([emailVerified])
+  // @@index([identityProvider])
+  @@index([identityProviderId])
+  @@map(name: "users")
+}
+
+
+model UserPassword {
+  hash   String
+  userId Int    @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TimeThreshold {
+  id       Int    @id @default(autoincrement())
+  userId   Int?
+  schedule Int    @unique // 假設 schedule 是唯一的查詢標記
+  data     Json   // PostgreSQL 的 json 或 jsonb 格式
+  // @@unique([schedule])
 }
