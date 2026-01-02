@@ -55,6 +55,8 @@ router.get('/api', (req, res) => {
 router.get('/api/threshold/:scheduleId', async (req: Request, res: Response) => {
     const scheduleId = parseInt(req.params.scheduleId);
     const shouldCreate = req.query.create === 'true';
+    console.log("shouldCreate",shouldCreate)
+        console.log("shouldCreate req.query.create",req.query.create)
     if (isNaN(scheduleId)) return res.status(400).send('ID 格式錯誤');
 
     try {

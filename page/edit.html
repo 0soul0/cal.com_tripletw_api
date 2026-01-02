@@ -91,7 +91,7 @@
 
     <div class="container">
         <header>
-            <h2>編輯出席時間</h2>
+            <h2>編輯最後預約時間</h2>
             <div class="schedule-info" id="scheduleDisplay">正在讀取排程...</div>
         </header>
 
@@ -118,6 +118,7 @@
 
     <script>
         let scheduleId = new URLSearchParams(window.location.search).get('scheduleId');
+        let create = new URLSearchParams(window.location.search).get('create');
 
         function handleClose() {
             window.close();
@@ -161,7 +162,7 @@
             document.getElementById('scheduleDisplay').innerText = `正在編輯排程 ID: ${scheduleId}`;
 
             try {
-                const res = await fetch(`/api/threshold/${scheduleId}`);
+                const res = await fetch(`/api/threshold/${scheduleId}?create=${create}`);
                 const result = await res.json();
                 const dataArray = Array.isArray(result) ? result : result.data;
                 const tbody = document.getElementById('tableBody');
